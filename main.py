@@ -44,22 +44,69 @@ print("The XBee is %.1F degrees C" % tp)
 #
 #
 #
-# # ******** Receive **********
-# print(" +--------------------------------------+")
-# print(" | XBee MicroPython Receive Data Sample |")
-# print(" +--------------------------------------+\n")
-#
-# print("Waiting for data...\n")
-#
-# while True:
-#     # Check if the XBee has any message in the queue.
-#     received_msg = xbee.receive()
-#     if received_msg:
-#         # Get the sender's 64-bit address and payload from the received message.
-#         sender = received_msg['sender_eui64']
-#         payload = received_msg['payload']
-#         print("Data received from %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in sender),
-#                                                payload.decode()))
-#
-#
+# ******** Receive **********
+import json
+import time
+COORD_64_ADDRESS = b'\x00\x13\xa2\x00A\xb7c\xae'
+
+print("Waiting for data...\n")
+
+# Initiate sensor related constants (to be done for each sensor, this example is for temperature)
+min_interval = 10 # seconds
+max_interval = 40 # seconds
+change_trigger = 0.5 # degrees C
+idx_last_sent_measure = -100
+idx = 0
+
+while True:
+    # Check if the XBee has any message in the queue.
+    received_msg = xbee.receive()
+    if received_msg:
+        # Get the sender's 64-bit address and payload from the received message.
+        sender = received_msg['sender_eui64']
+        payload = received_msg['payload']
+        print("Data received from %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in sender),
+                                               payload.decode()))
+		received_data_dict = json.loads(payload)
+		for item_key in received_data_dict.keys():
+			print(f"{item_key}: {received_data_dict[item_key]}")
+		try:
+			min_t = float(received_data_dict.min_interval)
+			max_t = float(received_data_dict.max_interval)
+			change_t = float(received_data_dict.change_threshold)
+			min_interval = min_t
+			max_interval = max_t
+			change_trigger = change_t
+		except Exception as e:
+			print(f"exception in casting the incoming message: {e}")
+	# measure
+	new_tp= xbee.atcmd('TP')
+	if new_tp > 0x7FFF:
+		new_tp = new_tp - 0x10000
+	measure_diff = tp - new_tp
+	is_change_trigger = (measure_diff > change_trigger or measure_diff < -change_trigger)
+	is_min_passed = idx > (idx_last_sent_measure + min_interval)
+	is_max_passed = idx > (idx_last_sent_measure + max_interval)
+	if (is_change_trigger and is_min_passed) or is_max_passed:
+		measure_dict = {'xbee_temp[C]': new_tp}
+		MESSAGE = json.dumps(measure_dict)
+		print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in COORD_64_ADDRESS),
+											MESSAGE))
+
+		try:
+			xbee.transmit(COORD_64_ADDRESS, MESSAGE)
+			print("Data sent successfully")
+			tp = new_tp
+			idx_last_sent_measure = idx
+		except Exception as e:
+			print("Transmit exception: %s" % str(e))
+	time.sleep(1)
+
+
+
+
+
+
+
+
 
