@@ -1,25 +1,30 @@
 import xbee
-# AT commands 'SH' + 'SL' combine to form the module's 64-bit address.
-#Digi MicroPython Programming Guide 184
-self_addr64 = xbee.atcmd('SH') + xbee.atcmd('SL')
-print("64-bit address: " + repr(self_addr64))
-# AT Command 'MY' is the module's self 16-bit network address.
-print("16-bit address: " + repr(xbee.atcmd('MY')))
-# Set the Network Identifier of the radio
-xbee.atcmd("NI", "XBee3 module")
-# Configure a destination address to the Coordinator ('2nd kit coord')
-xbee.atcmd("DH", 0x0013A200)  # Hex
-xbee.atcmd("DL", 0x41B763AE)  # Hex
-dest = xbee.atcmd("DH") + xbee.atcmd("DL")
-formatted_dest = ':'.join('%02x' % b for b in dest)
-print("Destination address set to: " + formatted_dest)
-# 'TP' records the current temperature measure on the module
-tp= xbee.atcmd('TP')
-if tp > 0x7FFF:
-    tp = tp - 0x10000
-print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
-print("The XBee is %.1F degrees C" % tp)
 
+class Device:
+    def __init__(self, name, coord_64_address=None):
+        self.self_addr64 = xbee.atcmd('SH') + xbee.atcmd('SL')
+        # AT commands 'SH' + 'SL' combine to form the module's 64-bit address.
+        print("64-bit address: " + repr(self.self_addr64))
+        # AT Command 'MY' is the module's self 16-bit network address.
+        print("16-bit address: " + repr(xbee.atcmd('MY')))
+        # Set the Network Identifier of the radio
+        xbee.atcmd("NI", name)
+        # Configure a destination address to the Coordinator ('2nd kit coord')
+        # xbee.atcmd("DH", 0x0013A200)  # Hex
+        # xbee.atcmd("DL", 0x41B763AE)  # Hex
+        # dest = xbee.atcmd("DH") + xbee.atcmd("DL")
+        # formatted_dest = ':'.join('%02x' % b for b in dest)
+        # print("Destination address set to: " + formatted_dest)
+        # 'TP' records the current temperature measure on the module
+        tp= xbee.atcmd('TP')
+        if tp > 0x7FFF:
+            tp = tp - 0x10000
+        print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
+        print("The XBee is %.1F degrees C" % tp)
+        self.COORD_64_ADDRESS = coord_64_address
+
+
+gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae')
 # # ******* TRANSMIT BROADCAST ****************
 # #test_data = 'Hello World!'
 # #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
@@ -47,15 +52,42 @@ print("The XBee is %.1F degrees C" % tp)
 # ******** Receive **********
 from json import loads, dumps
 from time import sleep
-COORD_64_ADDRESS = b'\x00\x13\xa2\x00A\xb7c\xae'
+import gc
 
+
+class Sensor:
+    def __init__(self, min, max, change):
+        self.min_interval = min  # seconds
+        self.max_interval = max  # seconds
+        self.change_trigger = change  # degrees C
+        self.idx_last_sent_measure = -100
+        self.last_sent_measure = 0
+
+    def should_send(self, loop_idx, new_measure):
+        measure_diff = self.last_sent_measure - new_measure
+        is_change_trigger = (measure_diff > self.change_trigger or measure_diff < -self.change_trigger)
+        is_min_passed = loop_idx > (self.idx_last_sent_measure + self.min_interval)
+        is_max_passed = loop_idx > (self.idx_last_sent_measure + self.max_interval)
+        return (is_change_trigger and is_min_passed) or is_max_passed
+
+class Xbee_temp(Sensor):
+    def __init__(self, min, max, change):
+        super().__init__(min, max, change)
+
+    def should_send(self, loop_idx, new_measure):
+        return super().should_send(loop_idx, new_measure)
+
+    def measure(self):
+        new_temp = xbee.atcmd('TP')
+        if new_temp > 0x7FFF:
+            new_temp = new_temp - 0x10000
+        return new_temp
+
+
+xbee_temperature = Xbee_temp(10, 40, 0.2)
 print("Waiting for data...\n")
 
-# Initiate sensor related constants (to be done for each sensor, this example is for temperature)
-min_interval = 10 # seconds
-max_interval = 40 # seconds
-change_trigger = 0.5 # degrees C
-idx_last_sent_measure = -100
+
 idx = 0
 
 while True:
@@ -73,35 +105,33 @@ while True:
             min_t = float(received_data_dict.min_interval)
             max_t = float(received_data_dict.max_interval)
             change_t = float(received_data_dict.change_threshold)
-            min_interval = min_t
-            max_interval = max_t
-            change_trigger = change_t
-            print("updated: min={0}, max={1}, change_trigger={2}".format(str(min_interval), str(max_interval), str(change_trigger)))
+            xbee_temperature.min_interval = min_t
+            xbee_temperature.max_interval = max_t
+            xbee_temperature.change_trigger = change_t
+            print("updated: min={0}, max={1}, change_trigger={2}".format(str(xbee_temperature.min_interval), str(xbee_temperature.max_interval), str(xbee_temperature.change_trigger)))
         except Exception as e:
             print("exception in casting the incoming message: {0}".format(str(e)))
     # measure (for each sensor)
-    new_tp= xbee.atcmd('TP')
-    if new_tp > 0x7FFF:
-        new_tp = new_tp - 0x10000
+    new_tp = xbee_temperature.measure()
     # Ask whether to send
-    measure_diff = tp - new_tp
-    is_change_trigger = (measure_diff > change_trigger or measure_diff < -change_trigger)
-    is_min_passed = idx > (idx_last_sent_measure + min_interval)
-    is_max_passed = idx > (idx_last_sent_measure + max_interval)
-    if (is_change_trigger and is_min_passed) or is_max_passed:
+    if xbee_temperature.should_send(idx, new_tp):
         measure_dict = {'xbee_temp[C]': new_tp}
         MESSAGE = dumps(measure_dict)
-        print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in COORD_64_ADDRESS),
-                                            MESSAGE))
-
+        print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in gps_temp_device.COORD_64_ADDRESS), MESSAGE))
         try:
-            xbee.transmit(COORD_64_ADDRESS, MESSAGE)
+            xbee.transmit(gps_temp_device.COORD_64_ADDRESS, MESSAGE)
             print("{0} sent successfully".format(MESSAGE))
-            tp = new_tp
-            idx_last_sent_measure = idx
+            xbee_temperature.last_sent_measure = new_tp
+            xbee_temperature.idx_last_sent_measure = idx
         except Exception as e:
             print("Transmit exception: %s" % str(e))
+        finally:
+            gc.collect()
     idx += 1
-    print("idx={0}".format(str(idx)))
+    print("idx={0}, mem_free={1}".format(str(idx), str(gc.mem_free())))
     sleep(1)
+
+
+
+
 
