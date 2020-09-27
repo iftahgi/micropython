@@ -1,5 +1,6 @@
 import xbee
 
+
 class Device:
     def __init__(self, name, coord_64_address=None):
         self.self_addr64 = xbee.atcmd('SH') + xbee.atcmd('SL')
@@ -70,7 +71,8 @@ class Sensor:
         is_max_passed = loop_idx > (self.idx_last_sent_measure + self.max_interval)
         return (is_change_trigger and is_min_passed) or is_max_passed
 
-class Xbee_temp(Sensor):
+
+class XbeeTemperature(Sensor):
     def __init__(self, min, max, change):
         super().__init__(min, max, change)
 
@@ -84,12 +86,11 @@ class Xbee_temp(Sensor):
         return new_temp
 
 
-xbee_temperature = Xbee_temp(10, 40, 0.2)
+xbee_temperature = XbeeTemperature(10, 40, 0.2)
 print("Waiting for data...\n")
 
 
 idx = 0
-
 while True:
     # Check if the XBee has any message in the queue.
     received_msg = xbee.receive()
@@ -98,13 +99,13 @@ while True:
         sender = received_msg['sender_eui64']
         payload = received_msg['payload']
         print("Data received from %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in sender), payload.decode()))
-        received_data_dict = loads(payload)
-        for item_key in received_data_dict.keys():
-            print("{0}: {1}".format(str(item_key), str(received_data_dict[item_key])))
         try:
-            min_t = float(received_data_dict.min_interval)
-            max_t = float(received_data_dict.max_interval)
-            change_t = float(received_data_dict.change_threshold)
+            received_data_dict = loads(payload.decode())
+            for item_key in received_data_dict.keys():
+                print("{0}: {1}".format(str(item_key), str(received_data_dict[item_key])))
+            min_t = float(received_data_dict['min_interval'])
+            max_t = float(received_data_dict['max_interval'])
+            change_t = float(received_data_dict['change_threshold'])
             xbee_temperature.min_interval = min_t
             xbee_temperature.max_interval = max_t
             xbee_temperature.change_trigger = change_t
