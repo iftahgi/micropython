@@ -58,7 +58,7 @@ class XbeeTemperature(Sensor):
         return new_temp
 
 
-gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae')
+gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae') # SINGLE Device
 # # ******* TRANSMIT BROADCAST ****************
 # #test_data = 'Hello World!'
 # #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
@@ -84,7 +84,7 @@ gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2
 #
 #
 
-xbee_temperature = XbeeTemperature(10, 40, 0.2)
+xbee_temperature = XbeeTemperature(10, 40, 0.2) # One of the sensors
 print("Waiting for data...\n")
 
 idx = 0
@@ -113,7 +113,7 @@ while True:
     new_tp = xbee_temperature.measure()
     # Ask whether to send
     if xbee_temperature.should_send(idx, new_tp):
-        measure_dict = {'xbee_temp[C]': new_tp}
+        measure_dict = {'xbee_temp_C': new_tp}
         MESSAGE = dumps(measure_dict)
         print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in gps_temp_device.COORD_64_ADDRESS), MESSAGE))
         try:
@@ -126,7 +126,7 @@ while True:
         finally:
             gc.collect()
     idx += 1
-    print("idx={0}, mem_free={1}".format(str(idx), str(gc.mem_free())))
+    #  print("idx={0}, mem_free={1}".format(str(idx), str(gc.mem_free())))
     sleep(1)
 
 
