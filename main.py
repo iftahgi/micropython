@@ -7,11 +7,11 @@ import gc
 class Device:
     def __init__(self, name, coord_64_address=None):
         self.self_addr64 = xbee.atcmd('SH') + xbee.atcmd('SL')
-        # AT commands 'SH' + 'SL' combine to form the module's 64-bit address.
-        print("64-bit address: " + repr(self.self_addr64))
-        # AT Command 'MY' is the module's self 16-bit network address.
-        print("16-bit address: " + repr(xbee.atcmd('MY')))
-        # Set the Network Identifier of the radio
+        # # AT commands 'SH' + 'SL' combine to form the module's 64-bit address.
+        # print("64-bit address: " + repr(self.self_addr64))
+        # # AT Command 'MY' is the module's self 16-bit network address.
+        # print("16-bit address: " + repr(xbee.atcmd('MY')))
+        # # Set the Network Identifier of the radio
         xbee.atcmd("NI", name)
         # Configure a destination address to the Coordinator ('2nd kit coord')
         # xbee.atcmd("DH", 0x0013A200)  # Hex
@@ -23,9 +23,10 @@ class Device:
         tp= xbee.atcmd('TP')
         if tp > 0x7FFF:
             tp = tp - 0x10000
-        print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
-        print("The XBee is %.1F degrees C" % tp)
+        # print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
+        # print("The XBee is %.1F degrees C" % tp)
         self.COORD_64_ADDRESS = coord_64_address
+        self.health = {'is_ok': 'ok', 'idx': 0}
 
 
 class Sensor:
@@ -58,7 +59,7 @@ class XbeeTemperature(Sensor):
         return new_temp
 
 
-gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae') # SINGLE Device
+gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae')
 # # ******* TRANSMIT BROADCAST ****************
 # #test_data = 'Hello World!'
 # #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
@@ -84,8 +85,9 @@ gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2
 #
 #
 
-xbee_temperature = XbeeTemperature(10, 40, 0.2) # One of the sensors
+xbee_temperature = XbeeTemperature(10, 40, 0.2)
 print("Waiting for data...\n")
+
 
 idx = 0
 while True:
@@ -112,13 +114,18 @@ while True:
     # measure (for each sensor)
     new_tp = xbee_temperature.measure()
     # Ask whether to send
-    if xbee_temperature.should_send(idx, new_tp):
-        measure_dict = {'xbee_temp_C': new_tp}
-        MESSAGE = dumps(measure_dict)
-        print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in gps_temp_device.COORD_64_ADDRESS), MESSAGE))
+    if idx % 10 == 0:
+        gps_temp_device.health['idx'] = idx
         try:
-            xbee.transmit(gps_temp_device.COORD_64_ADDRESS, MESSAGE)
-            print("{0} sent successfully".format(MESSAGE))
+            xbee.transmit(gps_temp_device.COORD_64_ADDRESS,
+                          dumps({'gps_temp_device_health': str(gps_temp_device.health)}))
+        except Exception as e:
+            print("Cannot send device health: {0}".format(e))
+    if xbee_temperature.should_send(idx, new_tp):
+        #  print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in gps_temp_device.COORD_64_ADDRESS), MESSAGE))
+        try:
+            xbee.transmit(gps_temp_device.COORD_64_ADDRESS, dumps({'xbee_temp_C': new_tp}))
+            # print("{0} sent successfully".format(dumps({'xbee_temp_C': new_tp})))
             xbee_temperature.last_sent_measure = new_tp
             xbee_temperature.idx_last_sent_measure = idx
         except Exception as e:
