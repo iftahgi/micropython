@@ -1,4 +1,7 @@
 import xbee
+from json import loads, dumps
+from time import sleep
+import gc
 
 
 class Device:
@@ -23,37 +26,6 @@ class Device:
         print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
         print("The XBee is %.1F degrees C" % tp)
         self.COORD_64_ADDRESS = coord_64_address
-
-
-gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae')
-# # ******* TRANSMIT BROADCAST ****************
-# #test_data = 'Hello World!'
-# #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
-#
-# # ***** Transmit TO ADDRESS *****
-# TODO: replace with the 64-bit address of your target device.
-# TARGET_64BIT_ADDR = b'\x00\x13\xA2\xFF\x00\x00\x00\x5D'
-# MESSAGE = "Hello XBee!"
-#
-# print(" +---------------------------------------+")
-# print(" | XBee MicroPython Transmit Data Sample |")
-# print(" +---------------------------------------+\n")
-#
-# print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in TARGET_64BIT_ADDR),
-#                                     MESSAGE))
-#
-# try:
-#     xbee.transmit(TARGET_64BIT_ADDR, MESSAGE)
-#     print("Data sent successfully")
-# except Exception as e:
-#     print("Transmit failure: %s" % str(e))
-#
-#
-#
-# ******** Receive **********
-from json import loads, dumps
-from time import sleep
-import gc
 
 
 class Sensor:
@@ -86,9 +58,34 @@ class XbeeTemperature(Sensor):
         return new_temp
 
 
+gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2\x00A\xb7c\xae')
+# # ******* TRANSMIT BROADCAST ****************
+# #test_data = 'Hello World!'
+# #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
+#
+# # ***** Transmit TO ADDRESS *****
+# TODO: replace with the 64-bit address of your target device.
+# TARGET_64BIT_ADDR = b'\x00\x13\xA2\xFF\x00\x00\x00\x5D'
+# MESSAGE = "Hello XBee!"
+#
+# print(" +---------------------------------------+")
+# print(" | XBee MicroPython Transmit Data Sample |")
+# print(" +---------------------------------------+\n")
+#
+# print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in TARGET_64BIT_ADDR),
+#                                     MESSAGE))
+#
+# try:
+#     xbee.transmit(TARGET_64BIT_ADDR, MESSAGE)
+#     print("Data sent successfully")
+# except Exception as e:
+#     print("Transmit failure: %s" % str(e))
+#
+#
+#
+
 xbee_temperature = XbeeTemperature(10, 40, 0.2)
 print("Waiting for data...\n")
-
 
 idx = 0
 while True:
