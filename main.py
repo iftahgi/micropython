@@ -20,13 +20,13 @@ class Device:
         # formatted_dest = ':'.join('%02x' % b for b in dest)
         # print("Destination address set to: " + formatted_dest)
         # 'TP' records the current temperature measure on the module
-        tp= xbee.atcmd('TP')
-        if tp > 0x7FFF:
-            tp = tp - 0x10000
+        # tp= xbee.atcmd('TP')
+        # if tp > 0x7FFF:
+        #     tp = tp - 0x10000
         # print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
         # print("The XBee is %.1F degrees C" % tp)
         self.COORD_64_ADDRESS = coord_64_address
-        self.health = {'is_ok': 'ok', 'idx': 0}
+        self.health = {'is_ok': 'True', 'idx': 0}
 
 
 class Sensor:
@@ -63,31 +63,9 @@ gps_temp_device = Device(name="GPS_Temperature", coord_64_address=b'\x00\x13\xa2
 # # ******* TRANSMIT BROADCAST ****************
 # #test_data = 'Hello World!'
 # #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
-#
-# # ***** Transmit TO ADDRESS *****
-# TODO: replace with the 64-bit address of your target device.
-# TARGET_64BIT_ADDR = b'\x00\x13\xA2\xFF\x00\x00\x00\x5D'
-# MESSAGE = "Hello XBee!"
-#
-# print(" +---------------------------------------+")
-# print(" | XBee MicroPython Transmit Data Sample |")
-# print(" +---------------------------------------+\n")
-#
-# print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in TARGET_64BIT_ADDR),
-#                                     MESSAGE))
-#
-# try:
-#     xbee.transmit(TARGET_64BIT_ADDR, MESSAGE)
-#     print("Data sent successfully")
-# except Exception as e:
-#     print("Transmit failure: %s" % str(e))
-#
-#
-#
 
 xbee_temperature = XbeeTemperature(10, 40, 0.2)
 print("Waiting for data...\n")
-
 
 idx = 0
 while True:
@@ -111,16 +89,18 @@ while True:
             print("updated: min={0}, max={1}, change_trigger={2}".format(str(xbee_temperature.min_interval), str(xbee_temperature.max_interval), str(xbee_temperature.change_trigger)))
         except Exception as e:
             print("exception in casting the incoming message: {0}".format(str(e)))
-    # measure (for each sensor)
-    new_tp = xbee_temperature.measure()
-    # Ask whether to send
+    # *** Run the following for each device
+    # Health
     if idx % 10 == 0:
         gps_temp_device.health['idx'] = idx
+        # TODO Add here health measures into the 'is_ok' field
         try:
             xbee.transmit(gps_temp_device.COORD_64_ADDRESS,
                           dumps({'gps_temp_device_health': str(gps_temp_device.health)}))
         except Exception as e:
             print("Cannot send device health: {0}".format(e))
+    # **** Run the following for each sensor
+    new_tp = xbee_temperature.measure()
     if xbee_temperature.should_send(idx, new_tp):
         #  print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in gps_temp_device.COORD_64_ADDRESS), MESSAGE))
         try:
