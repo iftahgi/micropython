@@ -7,11 +7,10 @@ import machine
 COORDINATOR_64_BIT_ADDRESS = b'\x00\x13\xa2\x00A\xb7c\xae'
 
 
-
 class Gps:
     def __init__(self, min, max, change, uart):
         super().__init__(min, max, change)
-        self.uart = uart
+        #  self.uart = machine.UART(1, 9600)
 
     def get_instance(self):
         return self
@@ -98,13 +97,9 @@ gps_temp_device = Device(name="GPS_Temperature", coord_64_address=COORDINATOR_64
 # # ******* TRANSMIT BROADCAST ****************
 # #test_data = 'Hello World!'
 # #xbee.transmit(xbee.ADDR_BROADCAST,test_data)
-
 xbee_temperature = XbeeTemperature(10, 40, 0.2)
 
-# u = machine.UART(1, 9600)
-
 # uart_gps = Gps(u)
-
 
 print("Waiting for data...\n")
 
@@ -140,7 +135,7 @@ while True:
                           dumps({'gps_temp_device_health': str(gps_temp_device.health)}))
         except Exception as e:
             print("Cannot send device health: {0}".format(e))
-    # **** Run the following for each sensor
+    # **** Run the following for each sensor in each device
     new_tp = xbee_temperature.measure()
     if xbee_temperature.should_send(idx, new_tp):
         #  print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in gps_temp_device.COORD_64_ADDRESS), MESSAGE))
