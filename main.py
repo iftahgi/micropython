@@ -10,7 +10,7 @@ COORDINATOR_64_BIT_ADDRESS = b'\x00\x13\xa2\x00A\xb7c\xae'
 class Gps:
     def __init__(self, min, max, change, uart):
         super().__init__(min, max, change)
-        #  self.uart = machine.UART(1, 9600)
+        self.uart = machine.UART(1, 9600)
 
     def get_instance(self):
         return self
