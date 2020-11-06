@@ -15,7 +15,7 @@ class Device:
         # # AT Command 'MY' is the module's self 16-bit network address.
         # print("16-bit address: " + repr(xbee.atcmd('MY')))
         # # Set the Network Identifier of the radio
-        xbee.atcmd("NI", name)
+        ##  xbee.atcmd("NI", name)
         # Configure a destination address to the Coordinator ('2nd kit coord')
         # xbee.atcmd("DH", 0x0013A200)  # Hex
         # xbee.atcmd("DL", 0x41B763AE)  # Hex
