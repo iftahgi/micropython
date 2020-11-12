@@ -131,7 +131,7 @@ while True:
             print("exception in casting the incoming message: {0}".format(str(e)))
     # *** Run the following for each device
     # Health
-    if idx % 10 == 0:
+    if idx % 10 == 0 or idx == 0:
         gps_temp_device.health['idx'] = idx
         # TODO Add here health measures into the 'is_ok' field
         try:
@@ -158,5 +158,3 @@ while True:
     idx += 1
     # print("idx={0}, mem_free={1}".format(str(idx), str(gc.mem_free())))
     sleep(1)
-
-
