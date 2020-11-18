@@ -29,7 +29,7 @@ class Device:
         # print("The XBee is %.1F degrees F" % (tp * 9.0 / 5.0 + 32.0))
         # print("The XBee is %.1F degrees C" % tp)
         self.COORD_64_ADDRESS = coord_64_address
-        self.health = {"is_ok": 'True', "idx": 0}
+        self.health = {"stat_v": 'ok1', "idx": 0}
 
 
 class Sensor:
@@ -133,8 +133,9 @@ while True:
     # Health
     if idx % 10 == 0 or idx == 0:
         gps_temp_device.health['idx'] = idx
-        # TODO Add here health measures into the 'is_ok' field
+        # TODO Add here health measures into the 'stat_v' field
         try:
+            # print(str(gps_temp_device.health))
             xbee.transmit(gps_temp_device.COORD_64_ADDRESS,
                           dumps({'gps_temp_device_health': str(gps_temp_device.health)}))
         except Exception as e:
